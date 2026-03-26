@@ -52,11 +52,11 @@ public class DeviceService {
     @Transactional
     public Device update(Long id, Device updated) {
         Device device = findById(id);
-        device.setName(updated.getName());
-        device.setUrl(updated.getUrl());
-        device.setDescription(updated.getDescription());
+        if (updated.getName() != null) device.setName(updated.getName());
+        if (updated.getUrl() != null) device.setUrl(updated.getUrl());
+        if (updated.getDescription() != null) device.setDescription(updated.getDescription());
+        if (updated.getCheckIntervalSec() != null) device.setCheckIntervalSec(updated.getCheckIntervalSec());
         device.setGroup(updated.getGroup());
-        device.setCheckIntervalSec(updated.getCheckIntervalSec());
         device.setUpdatedAt(LocalDateTime.now());
         return deviceRepository.save(device);
     }
