@@ -1,6 +1,7 @@
 package com.example.regalia.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -52,6 +53,13 @@ public class DeviceGroupController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         deviceGroupService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+    
+    // 그룹 위치 저장
+    @PutMapping("/{id}/position")
+    public ResponseEntity<Void> updatePosition(@PathVariable Long id, @RequestBody Map<String, Double> body) {
+        deviceGroupService.updatePosition(id, body.get("posX"), body.get("posY"));
         return ResponseEntity.noContent().build();
     }
 }

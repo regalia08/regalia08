@@ -66,10 +66,12 @@ public class TreeService {
         TreeNodeDto node = new TreeNodeDto();
         node.setId("device_" + device.getId());
         node.setText(device.getName());
-        node.setType("device");
 
         DeviceStatus status = deviceStatusRepository.findById(device.getId()).orElse(null);
-        node.setStatus(status != null ? status.getCurrentStatus().name() : "GREEN");
+        String statusStr = status != null ? status.getCurrentStatus().name() : "GREEN";
+        
+        node.setType("device-" + statusStr.toLowerCase());  // device-green, device-yellow, device-red
+        node.setStatus(statusStr);
         return node;
     }
 }

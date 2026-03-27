@@ -49,4 +49,13 @@ public class DeviceGroupService {
     public void delete(Long id) {
         deviceGroupRepository.deleteById(id);
     }
+    
+    // 그룹 위치 저장
+    @Transactional
+    public void updatePosition(Long id, Double posX, Double posY) {
+        DeviceGroup group = findById(id);
+        group.setPosX(posX);
+        group.setPosY(posY);
+        deviceGroupRepository.save(group);
+    }
 }

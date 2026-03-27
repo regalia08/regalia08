@@ -24,6 +24,26 @@
         .jstree-default .jstree-hovered { background: transparent !important; box-shadow: none !important; }
         .jstree-default .jstree-clicked { background: transparent !important; box-shadow: none !important; }
         .jstree-default .jstree-anchor { color: #eee !important; }
+		
+		/* 닫혀있을 때 */
+		.jstree-default .jstree-closed > .jstree-ocl {
+		    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M3 2 L7 5 L3 8' fill='none' stroke='%23888888' stroke-width='2'/%3E%3C/svg%3E") !important;
+		    background-position: center !important;
+		    background-repeat: no-repeat !important;
+		    background-size: 10px !important;
+		}
+
+		/* 열려있을 때 */
+		.jstree-default .jstree-open > .jstree-ocl {
+		    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 3 L5 7 L8 3' fill='none' stroke='%23ffffff' stroke-width='2'/%3E%3C/svg%3E") !important;
+		    background-position: center !important;
+		    background-repeat: no-repeat !important;
+		    background-size: 10px !important;
+		}
+		/* 장비 상태별 색깔 */
+		.jstree-default [class*="device-green"] .jstree-anchor { color: #4caf50 !important; }
+		.jstree-default [class*="device-yellow"] .jstree-anchor { color: #ffeb3b !important; }
+		.jstree-default [class*="device-red"] .jstree-anchor { color: #f44336 !important; }
         .sidebar-btns { padding: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #0f3460; }
         .btn { padding: 8px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; width: 100%; }
         .btn-primary { background: #e94560; color: white; }
@@ -56,6 +76,7 @@
         .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
         .modal-btns .btn { width: auto; padding: 8px 20px; }
     </style>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css">
 </head>
 <body>
 
@@ -163,6 +184,7 @@
         // =====================
         document.addEventListener('DOMContentLoaded', function() {
             loadTree();
+			loadTopology();
         });
 
         // =====================
@@ -175,10 +197,16 @@
                     $('#device-list').jstree('destroy');
                     $('#device-list').jstree({
                         core: { data: data, check_callback: true },
-                        types: {
-                            group:  { icon: 'jstree-folder' },
-                            device: { icon: 'jstree-file' }
-                        },
+						types: {
+						    root:   { icon: 'fa-solid fa-bars-staggered' },
+							group:          { icon: 'fa fa-folder' },
+						    'device-green':  { icon: 'fa fa-server' },
+						    'device-yellow': { icon: 'fa fa-server' },
+						    'device-red':    { icon: 'fa fa-server' },
+							default : {
+								max_depth : 2
+							}
+						},
 						contextmenu: {
 						    items: function(node) {
 						        if (node.type === 'root') {
@@ -188,7 +216,7 @@
 						                rename: { label: '그룹 수정', action: function() { openEditGroupModal(node); } },
 						                remove: { label: '그룹 삭제', action: function() { deleteGroup(node); } }
 						            };
-						        } else if (node.type === 'device') {
+						        } else if (node.type.startsWith('device')) {
 						            return {
 						                rename: { label: '장비 수정', action: function() { openEditDeviceModal(node); } },
 						                remove: { label: '장비 삭제', action: function() { deleteDevice(node); } }
@@ -200,15 +228,30 @@
                     });
 
                     $('#device-list').on('select_node.jstree', function(e, obj) {
-                        if (obj.node.type === 'device') {
+                        if (obj.node.type.startsWith('device')) {
                             var deviceId = obj.node.id.replace('device_', '');
                             openDetailPanel(deviceId, obj.node.text);
                         }
                     });
 					
+					$('#device-list').on('ready.jstree', function() {
+					    var instance = $(this).jstree(true);
+					    // 루트를 열면 자동으로 하위 노드들이 렌더링되면서 색상 계산 시작
+					    instance.open_node('root');
+					});
+
+					// 노드가 실제로 열린 직후(DOM 생성 완료) 호출
+					$('#device-list').on('after_open.jstree', function (e, data) {
+					    applyStatusColors();
+					});
+					
+					$('#device-list').on('open_node.jstree', function() {
+					    applyStatusColors();
+					});
+
 					// 드래그앤드롭으로 장비 이동 시
 					$('#device-list').on('move_node.jstree', function(e, data) {
-					    if (data.node.type === 'device') {
+					    if (data.node.type.startsWith('device')) {
 					        var deviceId = data.node.id.replace('device_', '');
 					        var newParentId = data.parent;
 					        var body = { id: parseInt(deviceId) };
@@ -226,14 +269,63 @@
 					            body: JSON.stringify(body)
 					        })
 					        .then(function() {
-					            loadTree();
+					            //loadTree();*/
+								
 					        });
+							applyStatusColors();
 					    }
 					});
 
                     updateStatusBadge(data);
                 });
         }
+		
+		function applyStatusColors() {
+		    var instance = $('#device-list').jstree(true);
+		    if (!instance) return;
+
+		    var groupStatus = {};
+
+		    // 1. DOM 중심이 아니라 jstree의 전체 '데이터'를 순회
+		    var allNodes = instance._model.data; 
+
+		    Object.keys(allNodes).forEach(function(id) {
+		        var node = allNodes[id];
+		        if (id === '#' || !node.type) return;
+
+		        // 장비 노드인 경우 부모 그룹의 상태를 결정
+		        if (node.type.startsWith('device')) {
+		            var parentId = node.parent;
+		            if (!groupStatus[parentId]) groupStatus[parentId] = 0;
+
+		            if (node.type === 'device-red') {
+		                groupStatus[parentId] = 2; // RED가 하나라도 있으면 RED
+		            } else if (node.type === 'device-yellow' && groupStatus[parentId] < 2) {
+		                groupStatus[parentId] = 1; // YELLOW
+		            }
+		            
+		            // 장비 자체 아이콘 색상 입히기 (DOM이 존재할 때만)
+		            var $nodeEl = $('#' + id);
+		            if ($nodeEl.length) {
+		                var color = (node.type === 'device-red') ? '#f44336' : 
+		                            (node.type === 'device-yellow') ? '#ffeb3b' : '#4caf50';
+		                $nodeEl.find('> .jstree-anchor > .jstree-themeicon').css('color', color);
+		            }
+		        }
+		    });
+
+		    // 2. 수집된 상태로 그룹 아이콘 색상 적용
+		    Object.keys(groupStatus).forEach(function(groupId) {
+		        var stat = groupStatus[groupId];
+		        var color = (stat === 2) ? '#f44336' : (stat === 1) ? '#ffeb3b' : '#4caf50';
+		        
+		        // 그룹 아이콘 색상 강제 적용
+		        $('#' + groupId).find('> .jstree-anchor > .jstree-themeicon').css('color', color);
+		    });
+
+		    // 루트(REGALIA)는 항상 기본색 유지
+		    $('#root').find('> .jstree-anchor > .jstree-themeicon').css('color', '#eee');
+		}
 
         // =====================
         // 상태 뱃지 업데이트
@@ -250,7 +342,7 @@
 		                if (device.status === 'YELLOW') yellow++;
 		                if (device.status === 'RED')    red++;
 		            });
-		        } else if (node.type === 'device') {
+		        } else if (node.type.startsWith('device')) {
 		            if (node.status === 'GREEN')  green++;
 		            if (node.status === 'YELLOW') yellow++;
 		            if (node.status === 'RED')    red++;
@@ -530,6 +622,29 @@
             currentGroupId = null;
             document.getElementById('modal-add-group').classList.remove('show');
         }
+		
+		
+		
+		function loadTopology() {
+			fetch('/api/topology')
+            .then(res => res.json())
+            .then(data => {
+				var container = document.getElementById('topology-canvas')
+				var nodes = new vis.DataSet(data.nodes);
+				var edges = new vis.DataSet(data.edges);
+				var options = {
+				    physics: {
+				        enabled: false
+				    }
+				};
+				var nodeData = {
+					nodes: nodes,
+					edges: edges
+				};
+				network = new vis.Network(container, nodeData, options);
+
+				});
+		}
     </script>
 
 </body>

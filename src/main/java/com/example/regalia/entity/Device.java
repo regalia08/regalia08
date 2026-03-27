@@ -14,10 +14,16 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+
 @Entity
 @Table(name = "device")
 @Getter
 @Setter
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+
 public class Device {
 
     @Id
@@ -26,6 +32,7 @@ public class Device {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id")
+    @JsonIgnore
     private DeviceGroup group;
 
     @Column(nullable = false, length = 100)
@@ -51,4 +58,6 @@ public class Device {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+    
+    
 }
