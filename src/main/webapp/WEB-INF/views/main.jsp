@@ -11,10 +11,10 @@
         #header { background: #16213e; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #0f3460; flex-shrink: 0; }
         #header h1 { font-size: 20px; color: #e94560; letter-spacing: 2px; cursor: pointer; }
         .status-summary { display: flex; gap: 16px; font-size: 13px; }
-        .badge { padding: 4px 12px; border-radius: 12px; font-weight: bold; }
-        .badge.green  { background: #1a4a1a; color: #4caf50; }
-        .badge.yellow { background: #4a3a00; color: #ffeb3b; }
-        .badge.red    { background: #4a1a1a; color: #f44336; }
+		.badge { padding:4px 12px; border-radius:12px; font-weight:600; border:1px solid currentColor; }
+		.badge.green  { background:rgba(46,160,67,0.15); color:#2ea043; }
+		.badge.yellow { background:rgba(210,153,34,0.15); color:#d29922; }
+		.badge.red    { background:rgba(218,54,51,0.15); color:#da3633; }
         #main { display: flex; flex: 1; overflow: hidden; }
         #sidebar { width: 240px; background: #16213e; border-right: 1px solid #0f3460; display: flex; flex-direction: column; flex-shrink: 0; }
         .sidebar-title { padding: 12px 16px; font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #0f3460; }
@@ -41,9 +41,15 @@
 		    background-size: 10px !important;
 		}
 		/* 장비 상태별 색깔 */
-		.jstree-default [class*="device-green"] .jstree-anchor { color: #4caf50 !important; }
-		.jstree-default [class*="device-yellow"] .jstree-anchor { color: #ffeb3b !important; }
-		.jstree-default [class*="device-red"] .jstree-anchor { color: #f44336 !important; }
+		.jstree-default [class*="device-green"] .jstree-anchor {
+		    color: #2ea043 !important;
+		}
+		.jstree-default [class*="device-yellow"] .jstree-anchor {
+		    color: #d29922 !important;
+		}
+		.jstree-default [class*="device-red"] .jstree-anchor {
+		    color: #da3633 !important;
+		}
         .sidebar-btns { padding: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #0f3460; }
         .btn { padding: 8px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; width: 100%; }
         .btn-primary { background: #e94560; color: white; }
@@ -51,8 +57,9 @@
         .btn:hover { opacity: 0.85; }
         #topology { flex: 1; background: #0d1117; position: relative; }
         #topology-canvas { width: 100%; height: 100%; }
-        #detail-panel { width: 340px; background: #16213e; border-left: 1px solid #0f3460; display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.3s; overflow: hidden; }
-        #detail-panel.hidden { width: 0; }
+		#detail-panel { position: absolute; right: 0; top: 0; height: 100%; width: 340px; background: #16213e; border-left: 1px solid #0f3460; display: flex; flex-direction: column; transition: transform 0.3s; transform: translateX(100%); z-index: 10; }
+		#detail-panel.hidden { transform: translateX(100%); }
+		#detail-panel:not(.hidden) { transform: translateX(0); }
         .panel-header { padding: 14px 16px; border-bottom: 1px solid #0f3460; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .panel-header h3 { font-size: 15px; }
         .btn-close { background: none; border: none; color: #888; cursor: pointer; font-size: 18px; }
@@ -63,9 +70,9 @@
         .log-item { padding: 6px 0; font-size: 12px; border-bottom: 1px solid #0f3460; display: flex; gap: 8px; align-items: center; }
         .log-item .time  { color: #888; flex-shrink: 0; }
         .log-item .ms    { flex-shrink: 0; }
-        .log-item .GREEN  { color: #4caf50; }
-        .log-item .YELLOW { color: #ffeb3b; }
-        .log-item .RED    { color: #f44336; }
+        .log-item .GREEN  { color: #2ea043; }
+        .log-item .YELLOW { color: #d29922; }
+        .log-item .RED    { color: #da3633; }
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
         .modal-overlay.show { display: flex; }
         .modal { background: #16213e; border: 1px solid #0f3460; border-radius: 10px; padding: 24px; width: 380px; }
@@ -75,6 +82,8 @@
         .form-group input, .form-group select { width: 100%; padding: 8px 12px; background: #0d1117; border: 1px solid #0f3460; border-radius: 6px; color: #eee; font-size: 13px; }
         .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
         .modal-btns .btn { width: auto; padding: 8px 20px; }
+		.ctx-item { padding: 8px 16px; cursor: pointer; font-size: 13px; color: #eee; }
+		.ctx-item:hover { background: #0f3460; }
     </style>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css">
 </head>
@@ -101,24 +110,35 @@
 
         <div id="topology">
             <div id="topology-canvas"></div>
+			<div id="detail-panel" class="hidden">
+	            <div class="panel-header">
+	                <h3 id="panel-device-name">장비명</h3>
+	                <button class="btn-close" onclick="closePanel()">X</button>
+	            </div>
+	            <div class="panel-section">
+	                <h4>응답시간 그래프</h4>
+	                <div id="response-chart-wrap">
+	                    <canvas id="response-chart"></canvas>
+	                </div>
+	            </div>
+	            <div class="panel-section">
+	                <h4>최신 로그</h4>
+	            </div>
+	            <div id="log-list"></div>
+	        </div>
+			<div id="topology-device-context-menu" style="display:none; position:absolute; background:#16213e; border:1px solid #0f3460; border-radius:6px; z-index:50; min-width:120px;">
+			    <div class="ctx-item" onclick="startConnect()">연결</div>
+			    <div class="ctx-item" onclick="startDisconnect()">연결 끊기</div>
+			    <div class="ctx-item" onclick="editDeviceFromTopology()">장비 수정</div>
+			    <div class="ctx-item" onclick="deleteDeviceFromTopology()">장비 삭제</div>
+			</div>
+			<div id="topology-group-context-menu" style="display:none; position:absolute; background:#16213e; border:1px solid #0f3460; border-radius:6px; z-index:50; min-width:120px;">
+			    <div class="ctx-item" onclick="editGroupFromTopology()">장비 수정</div>
+			    <div class="ctx-item" onclick="deleteGroupFromTopology()">장비 삭제</div>
+			</div>
         </div>
 
-        <div id="detail-panel" class="hidden">
-            <div class="panel-header">
-                <h3 id="panel-device-name">장비명</h3>
-                <button class="btn-close" onclick="closePanel()">X</button>
-            </div>
-            <div class="panel-section">
-                <h4>응답시간 그래프</h4>
-                <div id="response-chart-wrap">
-                    <canvas id="response-chart"></canvas>
-                </div>
-            </div>
-            <div class="panel-section">
-                <h4>최신 로그</h4>
-            </div>
-            <div id="log-list"></div>
-        </div>
+        
     </div>
 
     <!-- 장비 추가/수정 모달 -->
@@ -178,6 +198,12 @@
         let responseChart = null;
         let currentDeviceId = null;  // 수정 시 사용할 장비 id
         let currentGroupId  = null;  // 수정 시 사용할 그룹 id
+		let network = null;
+		let nodes = null;
+		let edges = null;
+		let connectingNodeId = null;
+		let disconnectingNodeId = null;
+		let currentPanelDeviceId = null;
 
         // =====================
         // 초기화
@@ -185,6 +211,11 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadTree();
 			loadTopology();
+			// 5분마다 토폴로지 새로고침
+			setInterval(function() {
+			    loadTopology();
+				loadTree();
+			}, 300000);
         });
 
         // =====================
@@ -226,14 +257,35 @@
 						},
                         plugins: ['contextmenu', 'types', 'dnd', 'wholerow']
                     });
+/*
+					$('#device-list').on('select_node.jstree', function(e, obj) {
+					    if (obj.node.type.startsWith('device')) {
+					        var deviceId = obj.node.id.replace('device_', '');
+							console.log('currentPanelDeviceId:', currentPanelDeviceId, 'deviceId:', deviceId);
+					        if (currentPanelDeviceId == deviceId) {
+					            closePanel();
+					            $('#device-list').jstree(true).deselect_node(obj.node);
+					        } else {
+					            openDetailPanel(deviceId, obj.node.text);
+					        }
+							
+					    }
+					});
+*/					
+					$('#device-list').on('click', '.jstree-anchor', function(e) {
+					    var nodeId = $(this).parent().attr('id');
+					    var node = $('#device-list').jstree(true).get_node(nodeId);
+					    if (node && node.type.startsWith('device')) {
+					        var deviceId = nodeId.replace('device_', '');
+					        if (currentPanelDeviceId == deviceId) {
+					            closePanel();
+					            $('#device-list').jstree(true).deselect_node(node);
+					        } else {
+					            openDetailPanel(deviceId, node.text);
+					        }
+					    }
+					});
 
-                    $('#device-list').on('select_node.jstree', function(e, obj) {
-                        if (obj.node.type.startsWith('device')) {
-                            var deviceId = obj.node.id.replace('device_', '');
-                            openDetailPanel(deviceId, obj.node.text);
-                        }
-                    });
-					
 					$('#device-list').on('ready.jstree', function() {
 					    var instance = $(this).jstree(true);
 					    // 루트를 열면 자동으로 하위 노드들이 렌더링되면서 색상 계산 시작
@@ -255,13 +307,20 @@
 					        var deviceId = data.node.id.replace('device_', '');
 					        var newParentId = data.parent;
 					        var body = { id: parseInt(deviceId) };
+							
+							edges.remove('edge_g_' + deviceId);
 
 					        // 부모가 root거나 #이면 미분류
 					        if (newParentId === 'root' || newParentId === '#') {
 					            body.group = null;
 					        } else {
 					            body.group = { id: parseInt(newParentId.replace('group_', '')) };
-					        }
+								edges.add({
+								    id: 'edge_g_' + deviceId,
+								    from: newParentId,
+								    to: 'device_' + deviceId
+								});
+							}
 
 					        fetch('/api/devices/' + deviceId, {
 					            method: 'PUT',
@@ -270,6 +329,7 @@
 					        })
 					        .then(function() {
 					            //loadTree();*/
+								//console.log('body:', JSON.stringify(body));
 								
 					        });
 							applyStatusColors();
@@ -307,8 +367,8 @@
 		            // 장비 자체 아이콘 색상 입히기 (DOM이 존재할 때만)
 		            var $nodeEl = $('#' + id);
 		            if ($nodeEl.length) {
-		                var color = (node.type === 'device-red') ? '#f44336' : 
-		                            (node.type === 'device-yellow') ? '#ffeb3b' : '#4caf50';
+		                var color = (node.type === 'device-red') ? '#da3633' : 
+		                            (node.type === 'device-yellow') ? '#d29922' : '#2ea043';
 		                $nodeEl.find('> .jstree-anchor > .jstree-themeicon').css('color', color);
 		            }
 		        }
@@ -317,7 +377,7 @@
 		    // 2. 수집된 상태로 그룹 아이콘 색상 적용
 		    Object.keys(groupStatus).forEach(function(groupId) {
 		        var stat = groupStatus[groupId];
-		        var color = (stat === 2) ? '#f44336' : (stat === 1) ? '#ffeb3b' : '#4caf50';
+		        var color = (stat === 2) ? '#da3633' : (stat === 1) ? '#d29922' : '#2ea043';
 		        
 		        // 그룹 아이콘 색상 강제 적용
 		        $('#' + groupId).find('> .jstree-anchor > .jstree-themeicon').css('color', color);
@@ -358,15 +418,22 @@
         // 상세 패널
         // =====================
         function openDetailPanel(deviceId, deviceName) {
-            document.getElementById('panel-device-name').textContent = deviceName;
+			if (currentPanelDeviceId === deviceId) {
+		        closePanel();
+		        return;
+		    }
+		    currentPanelDeviceId = deviceId;
+			document.getElementById('panel-device-name').textContent = deviceName;
             document.getElementById('detail-panel').classList.remove('hidden');
             loadGraph(deviceId);
             loadLogs(deviceId);
         }
 
-        function closePanel() {
-            document.getElementById('detail-panel').classList.add('hidden');
-        }
+		function closePanel() {
+		    console.log('closePanel 호출됨');
+		    currentPanelDeviceId = null;
+		    document.getElementById('detail-panel').classList.add('hidden');
+		}
 
         // =====================
         // 그래프
@@ -509,6 +576,7 @@
                 .then(function() {
                     closeDeviceModal();
                     loadTree();
+					loadTopology();
                 });
             } else {
                 // 추가 - POST
@@ -520,6 +588,7 @@
                 .then(function() {
                     closeDeviceModal();
                     loadTree();
+					loadTopology();
                 });
             }
         }
@@ -531,7 +600,10 @@
             var deviceId = node.id.replace('device_', '');
             if (!confirm(node.text + '을(를) 삭제하시겠습니까?')) return;
             fetch('/api/devices/' + deviceId, { method: 'DELETE' })
-                .then(function() { loadTree(); });
+                .then(function() { 
+					loadTree();
+					loadTopology();
+				 });
         }
 
         // =====================
@@ -584,6 +656,7 @@
                 .then(function() {
                     closeGroupModal();
                     loadTree();
+					loadTopology();
                 });
             } else {
                 // 추가 - POST
@@ -595,6 +668,7 @@
                 .then(function() {
                     closeGroupModal();
                     loadTree();
+					loadTopology();
                 });
             }
         }
@@ -606,7 +680,10 @@
             var groupId = node.id.replace('group_', '');
             if (!confirm(node.text + '을(를) 삭제하시겠습니까?')) return;
             fetch('/api/groups/' + groupId, { method: 'DELETE' })
-                .then(function() { loadTree(); });
+                .then(function() { 
+					loadTree();
+					loadTopology();
+			 	});
         }
 
         // =====================
@@ -625,26 +702,220 @@
 		
 		
 		
+		// =====================
+		// Topology 호출
+		// =====================
+		
+		
 		function loadTopology() {
 			fetch('/api/topology')
             .then(res => res.json())
             .then(data => {
 				var container = document.getElementById('topology-canvas')
-				var nodes = new vis.DataSet(data.nodes);
-				var edges = new vis.DataSet(data.edges);
+				nodes = new vis.DataSet(data.nodes);
+				edges = new vis.DataSet(data.edges);
 				var options = {
-				    physics: {
-				        enabled: false
-				    }
+					physics: { enabled : false },
+				    nodes: {
+				        shape: 'image',
+				        size: 20,
+						font:{ color : '#eee' }
+				    },
+					edges:{ 
+						color: { color: '#8b949e' },
+						smooth : false 
+					}
 				};
 				var nodeData = {
 					nodes: nodes,
 					edges: edges
 				};
+				
+				
+				// 드래그 시 위치 저장
 				network = new vis.Network(container, nodeData, options);
-
+				network.on("dragEnd", function(data){
+						if(data.nodes.length === 0) return;
+						var nodeId = data.nodes[0];
+						if (nodeId.startsWith('group_')) {
+							var groupId = nodeId.replace('group_', '');
+							var position = network.getPositions([nodeId]);
+							var pos = position[nodeId];
+							var body = {
+								posX: pos.x,
+								posY: pos.y,
+							};
+							fetch('/api/groups/' + groupId + "/position", {
+				                method: 'PUT',
+				                headers: { 'Content-Type': 'application/json' },
+				                body: JSON.stringify(body)
+				            });
+						}else if(nodeId.startsWith('device_')){
+							var deviceId = nodeId.replace('device_', '');
+							var position = network.getPositions([nodeId]);
+							var pos = position[nodeId];
+							var body = {
+								posX: pos.x,
+								posY: pos.y,
+							};
+							fetch('/api/devices/' + deviceId + "/position", {
+				                method: 'PUT',
+				                headers: { 'Content-Type': 'application/json' },
+				                body: JSON.stringify(body)
+				            });
+						}
+					});
+					
+					network.on('click', function(obj) {
+						var nodeId = obj.nodes[0]; 	
+						
+						if (connectingNodeId) {
+							if (!nodeId) {
+						        nodes.update({ id: connectingNodeId, opacity: 1 });
+						        connectingNodeId = null;
+						        return;
+							}
+							if (nodeId === connectingNodeId) {
+							    return;
+							}
+							var existingEdges = edges.get({
+							    filter: function(edge) {
+							        return (edge.from === connectingNodeId && edge.to === nodeId) ||
+							               (edge.from === nodeId && edge.to === connectingNodeId);
+							    }
+							});
+							if (existingEdges.length > 0) return;
+							if(nodes.get(nodeId).type.startsWith('device')){
+								edges.add({
+								    id: 'edge_l_' + connectingNodeId,
+								    from: connectingNodeId,
+								    to: nodeId
+								});
+								fetch('/api/links', {
+								    method: 'POST',
+								    headers: { 'Content-Type': 'application/json' },
+								    body: JSON.stringify({
+								        sourceId: connectingNodeId.replace('device_', ''),
+								        targetId: nodeId.replace('device_', '')
+								    })
+								})
+								.then(function() {
+								    nodes.update({ id: contextNodeId, opacity: 1 });
+								    connectingNodeId = null;
+								});
+							}else{
+								nodes.update({ id: contextNodeId, opacity: 1 });
+							    connectingNodeId = null;
+							}
+						}else if(disconnectingNodeId){
+							if (!nodeId) {
+						        nodes.update({ id: disconnectingNodeId, opacity: 1 });
+						        disconnectingNodeId = null;
+						        return;
+							}
+							if (nodeId === disconnectingNodeId) {
+							    return;
+							}
+							var existingEdges = edges.get({
+							    filter: function(edge) {
+							        return (edge.from === disconnectingNodeId && edge.to === nodeId) ||
+							               (edge.from === nodeId && edge.to === disconnectingNodeId);
+							    }
+							});
+							if (existingEdges.length === 0) return;
+							if(nodes.get(nodeId).type.startsWith('device')){
+								edges.remove(existingEdges[0].id);
+								fetch('/api/links/' + existingEdges[0].id.replace('edge_l_', ''), {
+								    method: 'DELETE'
+								})
+								.then(function() {
+								    nodes.update({ id: contextNodeId, opacity: 1 });
+								    disconnectingNodeId = null;
+								});
+							}else{
+								nodes.update({ id: contextNodeId, opacity: 1 });
+							    disconnectingNodeId = null;
+							}
+						}else {
+							if (nodeId) {
+						        var clickedNode = nodes.get(nodeId); 
+						        console.log('clicked node:', clickedNode);
+								if (clickedNode.type.startsWith('device')) {
+		                            var deviceId = clickedNode.id.replace('device_', '');
+		                            openDetailPanel(deviceId, clickedNode.label);
+		                        }
+						    }
+						}
+					});
+					
+					network.on('oncontext', function(params) {
+						document.getElementById('topology-device-context-menu').style.display = 'none';
+					    document.getElementById('topology-group-context-menu').style.display = 'none';
+					    params.event.preventDefault();
+					    var nodeId = network.getNodeAt(params.pointer.DOM);
+					    if (nodeId && nodeId.startsWith('device_')) {
+							var menu = document.getElementById('topology-device-context-menu');
+					        menu.style.display = 'block';
+					        menu.style.left = params.pointer.DOM.x + 'px';
+					        menu.style.top = params.pointer.DOM.y + 'px';
+					        // 현재 우클릭한 노드 저장
+					        contextNodeId = nodeId;
+					    }else if (nodeId && nodeId.startsWith('group_')) {
+							var menu = document.getElementById('topology-group-context-menu');
+					        menu.style.display = 'block';
+					        menu.style.left = params.pointer.DOM.x + 'px';
+					        menu.style.top = params.pointer.DOM.y + 'px';
+					        // 현재 우클릭한 노드 저장
+					        contextNodeId = nodeId;	
+						}
+					});
+					
+					
+				
 				});
 		}
+		
+		// 다른 곳 클릭하면 메뉴 닫기
+		document.addEventListener('click', function() {
+			document.getElementById('topology-device-context-menu').style.display = 'none';
+		    document.getElementById('topology-group-context-menu').style.display = 'none';
+		});
+		
+		// esc 클릭 시 edge 연결모드 해제
+		document.addEventListener('keydown', function(e) {
+		    if (e.key === 'Escape' && connectingNodeId) {
+		        nodes.update({ id: connectingNodeId, opacity: 1 });
+		        connectingNodeId = null;
+		    }
+		});
+		
+		// 우클릭 메뉴 실행함수
+		function editDeviceFromTopology(){
+            openEditDeviceModal({ id: contextNodeId });
+		}
+		
+		function deleteDeviceFromTopology() {
+		    deleteDevice({ id: contextNodeId, text: nodes.get(contextNodeId).label });
+		}
+		
+		function startConnect(){
+			connectingNodeId = contextNodeId;
+			nodes.update({ id: contextNodeId, opacity: 0.5 });
+		}
+		
+		function startDisconnect(){
+			disconnectingNodeId = contextNodeId;
+			nodes.update({ id: contextNodeId, opacity: 0.5 });
+		}
+
+		function editGroupFromTopology() {
+		    openEditGroupModal({ id: contextNodeId });
+		}
+
+		function deleteGroupFromTopology() {
+		    deleteGroup({ id: contextNodeId, text: nodes.get(contextNodeId).label });
+		}
+		
     </script>
 
 </body>

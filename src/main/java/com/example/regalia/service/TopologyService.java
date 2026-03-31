@@ -44,6 +44,7 @@ public class TopologyService {
             node.setType("group");
             node.setX(group.getPosX() != null ? group.getPosX() : random.nextDouble() * 800 - 400);
             node.setY(group.getPosY() != null ? group.getPosY() : random.nextDouble() * 600 - 300);
+            node.setImage("/images/icon-group-green.png");
             nodes.add(node);
         }
 
@@ -58,7 +59,9 @@ public class TopologyService {
             node.setY(device.getPosY() != null ? device.getPosY() : random.nextDouble() * 600 - 300);
 
             DeviceStatus status = deviceStatusRepository.findById(device.getId()).orElse(null);
-            node.setStatus(status != null ? status.getCurrentStatus().name() : "GREEN");
+            String statusStr = status != null ? status.getCurrentStatus().name() : "GREEN";
+            node.setStatus(statusStr);
+            node.setImage("/images/icon-device-" + statusStr.toLowerCase() + ".png");
             nodes.add(node);
 
             // 3. 그룹-장비 연결선

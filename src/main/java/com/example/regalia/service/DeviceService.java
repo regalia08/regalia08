@@ -12,7 +12,9 @@ import com.example.regalia.repository.DeviceRepository;
 import com.example.regalia.repository.DeviceStatusRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeviceService {
@@ -52,6 +54,7 @@ public class DeviceService {
     @Transactional
     public Device update(Long id, Device updated) {
         Device device = findById(id);
+        //log.info("group 변경: {} -> {}", device.getGroup(), updated.getGroup());
         if (updated.getName() != null) device.setName(updated.getName());
         if (updated.getUrl() != null) device.setUrl(updated.getUrl());
         if (updated.getDescription() != null) device.setDescription(updated.getDescription());

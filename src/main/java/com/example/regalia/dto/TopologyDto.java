@@ -20,6 +20,7 @@ public class TopologyDto {
         private String status;
         private Double x;
         private Double y;
+        private String image;
     }
 
     @Getter
