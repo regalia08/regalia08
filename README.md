@@ -41,7 +41,7 @@ Spring Boot (Controller → Service → Repository)
         ▲
         │
 Spring Scheduler (@Scheduled)
-  └─ 5분마다 HTTP 상태 체크
+  └─ 5분 간격(fixedDelay) HTTP 상태 체크
   └─ check_log 저장
   └─ device_status 업데이트
 ```
@@ -97,8 +97,8 @@ Spring Scheduler (@Scheduled)
 ![스크린샷: 우측 상세 패널 - 그래프와 로그](docs/images/graph-log.png)
 
 ### 4. 스케줄러
-- 비동기 스케줄링 기반 자동 상태 수집
-- 5분마다 전체 장비 HTTP 상태 체크
+- Spring Scheduler(`@Scheduled`) 기반 자동 상태 수집
+- 전체 장비 HTTP 상태 체크 (`fixedDelay` 5분: 이전 주기 종료 후 5분 대기, 장비는 순차 체크)
 - 응답시간, 상태코드, 성공여부 DB 저장
 - 30일 지난 로그 자동 정리
 
@@ -178,9 +178,10 @@ http://localhost:8080/
 
 ## 🛠️ 트러블슈팅
 
-### 1. JSON 순환 참조 문제
-- **문제**: Entity 직렬화 시 `Device → DeviceGroup → Device` 무한 참조로 StackOverflow 발생
-- **해결**: `@JsonIgnore`, `@JsonIgnoreProperties` 어노테이션으로 순환 참조 차단
+### 1. Entity JSON 직렬화 문제
+- **문제**: Entity를 그대로 JSON으로 반환할 때 LAZY 연관 객체(Hibernate 프록시)가 직렬화되며 오류가 발생하고, 불필요한 연관 데이터가 노출됨
+- **해결**: 연관 필드에 `@JsonIgnore`, `@JsonIgnoreProperties({"hibernateLazyInitializer","handler"})` 적용 및 `spring.jackson.serialization.fail-on-empty-beans=false` 설정
+- **개선 예정**: Entity 직접 반환 대신 응답 DTO 분리
 
 ### 2. Lombok 미인식 문제
 - **문제**: STS에서 `@RequiredArgsConstructor` 등 Lombok 어노테이션 미인식
